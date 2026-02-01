@@ -69,15 +69,20 @@ jobs:
       - name: Install Newman
         run: npm install -g newman newman-reporter-htmlextra
 
-      # 9️⃣ Run Postman collection
+      # 9️⃣ Debug QA Environment
+      - name: Debug QA Environment
+        run: |
+          echo "Listing Postman folder contents:"
+          ls -la Backend-repo/postman/
+          
+          echo "Displaying QA Environment file contents:"
+          cat "Backend-repo/postman/QA Environment.postman_environment.json"
+
+      # 🔹 Run Postman collection
       - name: Run Postman collection
         run: |
-          ls -la Backend-repo/postman/
-
           newman run "Backend-repo/postman/E2E Shift Management.postman_collection.json" \
-            -e "Backend-repo/postman/QA Environment.postman_environment.json" \
-            --global-var "adminEmail=${{ secrets.ADMINEMAIL }}" \
-            --global-var "adminPassword=${{ secrets.ADMINPASSWORD }}" \
+            -e "Backend-repo/postman/QA\ Environment.postman_environment.json" \
             -r cli,json,htmlextra \
             --reporter-json-export newman-report.json \
             --reporter-htmlextra-export newman-report.html
@@ -89,4 +94,4 @@ jobs:
           name: newman-report
           path: |
             newman-report.json
-            newman-
+            newman-report.html
