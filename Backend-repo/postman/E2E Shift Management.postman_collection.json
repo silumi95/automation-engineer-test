@@ -76,7 +76,7 @@
                       "    });\r",
                       "\r",
                       "    // Save user data in environment\r",
-                      "    pm.environment.set(\"userId\", res.user.id);\r",
+                      "    pm.environment.set(\"newUserId\", res.user.id);\r",
                       "    pm.environment.set(\"userName\", res.user.name);\r",
                       "    pm.environment.set(\"userEmail\", res.user.email);\r",
                       "    pm.environment.set(\"userRole\", res.user.role);\r",
