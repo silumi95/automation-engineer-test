@@ -72,10 +72,10 @@ jobs:
       # 9️⃣ Run Postman collection
       - name: Run Postman collection
         run: |
-          ls -la backend/postman/
+          ls -la Backend-repo/postman/
 
-          newman run "backend-repo/postman/E2E Shift Management.postman_collection.json" \
-            -e "backend-repo/postman/QA Environment.postman_environment.json" \
+          newman run "Backend-repo/postman/E2E Shift Management.postman_collection.json" \
+            -e "Backend-repo/postman/QA Environment.postman_environment.json" \
             --global-var "adminEmail=${{ secrets.ADMINEMAIL }}" \
             --global-var "adminPassword=${{ secrets.ADMINPASSWORD }}" \
             -r cli,json,htmlextra \
