@@ -15,11 +15,9 @@ jobs:
           - 27017:27017
 
     steps:
-      # Checkout tests repo
       - name: Checkout tests repo
         uses: actions/checkout@v4
 
-      # Checkout backend repo
       - name: Checkout backend repo
         uses: actions/checkout@v4
         with:
@@ -27,29 +25,26 @@ jobs:
           path: backend
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      # Setup Node.js
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 18
 
-      # Install backend dependencies
       - name: Install backend dependencies
         working-directory: backend
         run: npm install
 
-      # Wait for MongoDB
+      - name: Install netcat
+        run: sudo apt-get update && sudo apt-get install -y netcat-openbsd
+
       - name: Wait for MongoDB
         run: |
-          sudo apt-get update && sudo apt-get install -y netcat
           echo "Waiting for MongoDB to be ready..."
           for i in {1..30}; do
             nc -z mongodb 27017 && echo "MongoDB is ready" && break
-            echo "MongoDB not ready yet..."
             sleep 2
           done
 
-      # Start backend server
       - name: Start backend server
         working-directory: backend
         env:
@@ -57,20 +52,16 @@ jobs:
           MONGO_URI: mongodb://mongodb:27017/qa_test_db
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
         run: |
-          npm run dev &   # start backend in background
+          npm run dev &
           echo "Waiting for backend to respond..."
           for i in {1..30}; do
-            nc -z localhost 8000 && echo "Backend ready" && break
-            echo "Backend not ready yet..."
+            curl -s http://localhost:8000/api/user/register >/dev/null && echo "Backend ready" && break
             sleep 2
           done
-          sleep 5  # extra buffer to ensure backend fully initialized
 
-      # Install Newman
       - name: Install Newman
         run: npm install -g newman
 
-      # Run Postman collection
       - name: Run Postman collection
         run: |
           ls -la Backend-repo/postman/
@@ -82,14 +73,12 @@ jobs:
             --reporters cli,json \
             --reporter-json-export Backend-repo/newman-report.json
 
-      # Upload Newman report
       - name: Upload Newman report
         uses: actions/upload-artifact@v4
         with:
           name: newman-report
           path: Backend-repo/newman-report.json
 
-      # Comment Newman summary on PR
       - name: Comment Newman summary on PR
         if: always()
         uses: actions/github-script@v7
