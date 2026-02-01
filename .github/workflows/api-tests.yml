@@ -34,6 +34,14 @@ jobs:
         working-directory: backend
         run: npm install
 
+      - name: Wait for MongoDB
+        run: |
+          echo "Waiting for MongoDB to be ready..."
+          for i in {1..30}; do
+            nc -z mongodb 27017 && echo "MongoDB is ready" && break
+            sleep 2
+          done
+
       - name: Start backend server
         working-directory: backend
         env:
@@ -42,9 +50,11 @@ jobs:
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
         run: |
           npm run dev &
-          echo "Waiting for backend to be ready..."
-          
-          sleep 20
+          echo "Waiting for backend to respond..."
+          for i in {1..30}; do
+            curl -s http://localhost:8000/api/user/register >/dev/null && echo "Backend ready" && break
+            sleep 2
+          done
 
       - name: Install Newman
         run: npm install -g newman
@@ -93,9 +103,13 @@ jobs:
 
             Duration: ${report.run.timings.completed - report.run.timings.started} ms
             `;
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: summary
-            });
+            if (context.issue.number) {
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: summary
+              });
+            } else {
+              console.log(summary);
+            }
