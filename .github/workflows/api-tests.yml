@@ -48,8 +48,8 @@ jobs:
       - name: Run Postman collection
         working-directory: backend
         run: |
-          newman run postman/ShiftManagement.postman_collection.json \
-          --environment postman/ShiftManagement.postman_environment.json \
+          newman run ../Backend/postman/ShiftManagement.postman_collection.json \
+          --environment ../Backend/postman/ShiftManagement.postman_environment.json \
           --reporters cli,json \
           --reporter-json-export newman-report.json
 
