@@ -47,16 +47,17 @@ jobs:
 
       - name: Run Postman collection
         run: |
-          newman run Backend/postman/ShiftManagement.postman_collection.json \
-          --environment Backend/postman/ShiftManagement.postman_environment.json \
+          ls -la Backend-repo/postman/
+          newman run Backend-repo/postman/ShiftManagement.postman_collection.json \
+          --environment Backend-repo/postman/ShiftManagement.postman_environment.json \
           --reporters cli,json \
-          --reporter-json-export Backend/newman-report.json
+          --reporter-json-export Backend-repo/newman-report.json
 
       - name: Upload Newman report
         uses: actions/upload-artifact@v4
         with:
           name: newman-report
-          path: Backend/newman-report.json -report.json
+          path: Backend-repo/newman-report.json -report.json
 
       - name: Comment Newman summary on PR
         if: always()
@@ -65,7 +66,7 @@ jobs:
           script: |
             const fs = require('fs');
 
-            const reportPath = 'backend/newman-report.json';
+            const reportPath = 'backend-repo/newman-report.json';
             if (!fs.existsSync(reportPath)) {
               console.log('Newman report not found');
               return;
