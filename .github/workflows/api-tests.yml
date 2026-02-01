@@ -39,6 +39,10 @@ jobs:
       - name: Start backend server
         working-directory: backend
         run: |
+          npm install
+          export PORT=8000
+          export JWT_SECRET=mysecret
+          export MONGO_URI=mongodb://localhost:27017/qa_test_db  
           npm run start &
           sleep 10
 
@@ -50,6 +54,7 @@ jobs:
           ls -la Backend-repo/postman/
           newman run "Backend-repo/postman/E2E Shift Management.postman_collection.json" \
           --environment "Backend-repo/postman/QA Environment.postman_environment.json" \
+          --env-var "baseUrl=http://localhost:8000" \
           --reporters cli,json \
           --reporter-json-export Backend-repo/newman-report.json
 
