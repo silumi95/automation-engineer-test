@@ -53,8 +53,8 @@ jobs:
           ls -la Backend-repo/postman/
           newman run "Backend-repo/postman/E2E Shift Management.postman_collection.json" \
           --environment "Backend-repo/postman/QA Environment.postman_environment.json" \
-          --global-var "admin_email=${{ secrets.ADMINEMAIL }}" \
-          --global-var "admin_password=${{ secrets.ADMINPASSWORD }}" \
+          --global-var "adminEmail=${{ secrets.ADMINEMAIL }}" \
+          --global-var "adminPassword=${{ secrets.ADMINPASSWORD }}" \
           --globals Backend-repo/postman/global.json \
           --reporters cli,json \
           --reporter-json-export Backend-repo/newman-report.json
