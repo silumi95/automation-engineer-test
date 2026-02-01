@@ -74,8 +74,8 @@ jobs:
         run: |
           ls -la backend/postman/
 
-          newman run "backend/postman/E2E Shift Management.postman_collection.json" \
-            -e "backend/postman/QA Environment.postman_environment.json" \
+          newman run "backend-repo/postman/E2E Shift Management.postman_collection.json" \
+            -e "backend-repo/postman/QA Environment.postman_environment.json" \
             --global-var "adminEmail=${{ secrets.ADMINEMAIL }}" \
             --global-var "adminPassword=${{ secrets.ADMINPASSWORD }}" \
             -r cli,json,htmlextra \
