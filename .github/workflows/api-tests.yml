@@ -37,7 +37,7 @@ jobs:
         working-directory: backend
         run: npm install
 
-      # 5️⃣ Install netcat (for port checks)
+      # 5️⃣ Install netcat
       - name: Install netcat
         run: sudo apt-get update && sudo apt-get install -y netcat-openbsd
 
@@ -50,7 +50,18 @@ jobs:
             sleep 2
           done
 
-      # 7️⃣ Start backend server
+      # 7️⃣ Seed admin user
+      - name: Seed admin user
+        run: |
+          mongo mongodb://127.0.0.1:27017/qa_test_db --eval '
+          db.users.insertOne({
+            email: "john@example.com",
+            password: "StrongPass123!",
+            role: "admin"
+          });
+          '
+
+      # 8️⃣ Start backend server
       - name: Start backend server
         working-directory: backend
         env:
@@ -65,11 +76,11 @@ jobs:
             sleep 2
           done
 
-      # 8️⃣ Install Newman
+      # 9️⃣ Install Newman
       - name: Install Newman
         run: npm install -g newman newman-reporter-htmlextra
 
-      # 9️⃣ Debug QA Environment
+      # 🔟 Debug QA Environment
       - name: Debug QA Environment
         run: |
           echo "Listing Postman folder contents:"
@@ -77,7 +88,8 @@ jobs:
           
           echo "Displaying QA Environment file contents:"
           cat "Backend-repo/postman/QA Environment.postman_environment.json"
-      # 🔹 Run Postman collection
+
+      # 1️⃣1️⃣ Run Postman collection
       - name: Run Postman collection
         run: |
           newman run "Backend-repo/postman/E2E Shift Management.postman_collection.json" \
@@ -85,8 +97,8 @@ jobs:
             -r cli,json,htmlextra \
             --reporter-json-export newman-report.json \
             --reporter-htmlextra-export newman-report.html
-     
-      # 🔟 Upload Newman report
+
+      # 1️⃣2️⃣ Upload Newman report
       - name: Upload Newman report
         uses: actions/upload-artifact@v4
         with:
