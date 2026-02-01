@@ -1,0 +1,10 @@
+{
+  "id": "global-vars",
+  "name": "Global Variables",
+  "values": [
+    { "key": "baseUrl", "value": "http://localhost:8000/api", "enabled": true },
+    { "key": "adminEmail", "value": "john@example.com", "enabled": true },
+    { "key": "adminPassword", "value": "StrongPass123!", "enabled": true }
+  ],
+  "enabled": true
+}
