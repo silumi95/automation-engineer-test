@@ -50,16 +50,26 @@ jobs:
             sleep 2
           done
 
-      # 7️⃣ Seed admin user
+      # 7️⃣ Seed admin user using Node.js
       - name: Seed admin user
+        working-directory: backend
         run: |
-          mongo mongodb://127.0.0.1:27017/qa_test_db --eval '
-          db.users.insertOne({
-            email: "john@example.com",
-            password: "StrongPass123!",
-            role: "admin"
-          });
-          '
+          node -e "
+          const { MongoClient } = require('mongodb');
+          const bcrypt = require('bcryptjs');
+          (async () => {
+            const client = new MongoClient('mongodb://127.0.0.1:27017');
+            await client.connect();
+            const db = client.db('qa_test_db');
+            const hashedPassword = await bcrypt.hash('StrongPass123!', 10);
+            await db.collection('users').insertOne({
+              email: 'john@example.com',
+              password: hashedPassword,
+              role: 'admin'
+            });
+            await client.close();
+          })();
+          "
 
       # 8️⃣ Start backend server
       - name: Start backend server
