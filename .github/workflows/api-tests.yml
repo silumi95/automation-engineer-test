@@ -37,7 +37,7 @@ jobs:
         working-directory: backend
         run: npm install
 
-      # 5️⃣ Install netcat
+      # 5️⃣ Install netcat (for port check)
       - name: Install netcat
         run: sudo apt-get update && sudo apt-get install -y netcat-openbsd
 
@@ -50,39 +50,30 @@ jobs:
             sleep 2
           done
 
-      # 7️⃣ Seed admin user using Node.js
-      - name: Seed admin user
-        working-directory: backend
-        run: |
-          node -e "
-          const { MongoClient } = require('mongodb');
-          const bcrypt = require('bcryptjs');
-          (async () => {
-            const client = new MongoClient('mongodb://127.0.0.1:27017');
-            await client.connect();
-            const db = client.db('qa_test_db');
-            const hashedPassword = await bcrypt.hash('StrongPass123!', 10);
-            await db.collection('users').insertOne({
-              email: 'john@example.com',
-              password: hashedPassword,
-              role: 'admin'
-            });
-            await client.close();
-          })();
-          "
-
-      # 8️⃣ Start backend server
+      # 7️⃣ Start backend server
       - name: Start backend server
         working-directory: backend
         env:
           PORT: 8000
           MONGO_URI: mongodb://127.0.0.1:27017/qa_test_db
-          JWT_SECRET: ${{ secrets.JWT_SECRET }}
         run: |
           npm run dev &
           echo "Waiting for backend on port 8000..."
           for i in {1..30}; do
             nc -z localhost 8000 && echo "Backend ready" && break
+            sleep 2
+          done
+
+      # 8️⃣ Health check for backend
+      - name: Wait for backend health
+        run: |
+          echo "Checking backend health..."
+          for i in {1..30}; do
+            status=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8000/health || true)
+            if [ "$status" = "200" ]; then
+              echo "Backend healthy"
+              break
+            fi
             sleep 2
           done
 
