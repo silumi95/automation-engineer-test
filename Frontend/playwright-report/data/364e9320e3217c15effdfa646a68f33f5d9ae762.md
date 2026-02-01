@@ -1,0 +1,82 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e2]:
+  - region "Notifications Alt+T"
+  - generic [ref=e4]:
+    - navigation [ref=e5]:
+      - generic [ref=e6]:
+        - link "Orta Shift Manager" [ref=e8] [cursor=pointer]:
+          - /url: /
+          - generic [ref=e11]: Orta Shift Manager
+        - list [ref=e12]:
+          - generic [ref=e13]:
+            - link "Login" [ref=e14] [cursor=pointer]:
+              - /url: /login
+            - button "Register" [ref=e15] [cursor=pointer]
+    - main [ref=e17]:
+      - generic [ref=e19]:
+        - generic [ref=e21]:
+          - heading "Your Shifts" [level=1] [ref=e22]
+          - paragraph [ref=e23]: View and manage your scheduled shifts. Switch between calendar and table view.
+        - generic [ref=e24]:
+          - tablist [ref=e26]:
+            - tab "Calendar View" [ref=e27] [cursor=pointer]:
+              - generic [ref=e28]: Calendar View
+            - tab "Table View" [selected] [ref=e29] [cursor=pointer]:
+              - generic [ref=e31]: Table View
+          - generic [ref=e33]:
+            - generic [ref=e34]:
+              - generic [ref=e36]:
+                - generic [ref=e38]:
+                  - text: Status Filter
+                  - combobox [ref=e39]
+                - button "All Statuses Status Filter" [ref=e41] [cursor=pointer]:
+                  - generic: Status Filter
+                  - generic [ref=e43]: All Statuses
+                  - img [ref=e44]
+              - generic [ref=e47]:
+                - generic [ref=e49]:
+                  - text: Sort By
+                  - combobox [ref=e50]
+                - button "Date Sort By" [ref=e52] [cursor=pointer]:
+                  - generic: Sort By
+                  - generic [ref=e54]: Date
+                  - img [ref=e55]
+              - generic [ref=e58]:
+                - generic [ref=e60]:
+                  - text: Order
+                  - combobox [ref=e61]
+                - button "Ascending Order" [ref=e63] [cursor=pointer]:
+                  - generic: Order
+                  - generic [ref=e65]: Ascending
+                  - img [ref=e66]
+              - generic [ref=e69]:
+                - generic [ref=e71]:
+                  - text: Per Page
+                  - combobox [ref=e72]
+                - button "10 Per Page" [ref=e74] [cursor=pointer]:
+                  - generic: Per Page
+                  - generic [ref=e76]: "10"
+                  - img [ref=e77]
+            - generic [ref=e80]:
+              - heading "Upcoming Shifts" [level=2] [ref=e81]
+              - paragraph [ref=e82]: Your scheduled shifts in chronological order
+            - grid "Shifts table" [ref=e86]:
+              - rowgroup [ref=e87]:
+                - row "DATE SHIFT TIME LOCATION STATUS WORKER ACTIONS" [ref=e88]:
+                  - columnheader "DATE" [ref=e89]
+                  - columnheader "SHIFT" [ref=e90]
+                  - columnheader "TIME" [ref=e91]
+                  - columnheader "LOCATION" [ref=e92]
+                  - columnheader "STATUS" [ref=e93]
+                  - columnheader "WORKER" [ref=e94]
+                  - columnheader "ACTIONS" [ref=e95]
+                - row [ref=e96]
+              - rowgroup [ref=e97]:
+                - row "No shifts found You don't have any shifts scheduled yet." [ref=e98]:
+                  - gridcell "No shifts found You don't have any shifts scheduled yet." [ref=e99]:
+                    - generic [ref=e100]:
+                      - heading "No shifts found" [level=3] [ref=e101]
+                      - paragraph [ref=e102]: You don't have any shifts scheduled yet.
+```
