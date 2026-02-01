@@ -54,7 +54,7 @@ jobs:
           ls -la Backend-repo/postman/
           newman run "Backend-repo/postman/E2E Shift Management.postman_collection.json" \
           --environment "Backend-repo/postman/QA Environment.postman_environment.json" \
-          --env-var "baseUrl=http://localhost:8000" \
+          --env-var "baseUrl=http://localhost:8000/api" \
           --reporters cli,json \
           --reporter-json-export Backend-repo/newman-report.json
 
