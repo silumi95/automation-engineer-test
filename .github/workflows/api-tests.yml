@@ -15,11 +15,9 @@ jobs:
           - 27017:27017
 
     steps:
-      # Checkout tests repo
       - name: Checkout tests repo
         uses: actions/checkout@v4
 
-      # Checkout backend repo into 'backend' folder
       - name: Checkout backend repo
         uses: actions/checkout@v4
         with:
@@ -38,30 +36,40 @@ jobs:
 
       - name: Start backend server
         working-directory: backend
+        env:
+          PORT: 8000
+          MONGO_URI: mongodb://localhost:27017/qa_test_db
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
         run: |
-          npm install
-          export PORT=8000
-          export MONGO_URI=mongodb://localhost:27017/qa_test_db  
           npm run start &
-          sleep 20
+          echo "Waiting for backend to be ready..."
+          for i in {1..30}; do
+            if curl -s http://localhost:8000/health; then
+              echo "Backend is up!"
+              break
+            fi
+            sleep 2
+          done
 
       - name: Install Newman
         run: npm install -g newman
-              sleep 20
+
       - name: Run Postman collection
         run: |
           ls -la Backend-repo/postman/
           newman run "Backend-repo/postman/E2E Shift Management.postman_collection.json" \
-          --environment "Backend-repo/postman/QA Environment.postman_environment.json" \
-          
-          --reporters cli,json \
-          --reporter-json-export Backend-repo/newman-report.json
+            --environment "Backend-repo/postman/QA Environment.postman_environment.json" \
+            --global-var "adminEmail=${{ secrets.ADMINEMAIL }}" \
+            --global-var "adminPassword=${{ secrets.ADMINPASSWORD }}" \
+            --globals Backend-repo/postman/global.json \
+            --reporters cli,json \
+            --reporter-json-export Backend-repo/newman-report.json
 
       - name: Upload Newman report
         uses: actions/upload-artifact@v4
         with:
           name: newman-report
-          path: Backend-repo/newman-report.json -report.json
+          path: Backend-repo/newman-report.json
 
       - name: Comment Newman summary on PR
         if: always()
@@ -69,16 +77,13 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-
-            const reportPath = 'backend-repo/newman-report.json';
+            const reportPath = 'Backend-repo/newman-report.json';
             if (!fs.existsSync(reportPath)) {
               console.log('Newman report not found');
               return;
             }
-
             const report = JSON.parse(fs.readFileSync(reportPath));
             const stats = report.run.stats;
-
             const summary = `
             ## Newman API Test Results
 
@@ -93,7 +98,6 @@ jobs:
 
             Duration: ${report.run.timings.completed - report.run.timings.started} ms
             `;
-
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
