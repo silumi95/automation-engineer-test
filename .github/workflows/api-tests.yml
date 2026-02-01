@@ -48,8 +48,8 @@ jobs:
       - name: Run Postman collection
         run: |
           ls -la Backend-repo/postman/
-          newman run Backend-repo/postman/ShiftManagement.postman_collection.json \
-          --environment Backend-repo/postman/ShiftManagement.postman_environment.json \
+          newman run "Backend-repo/postman/E2E Shift Management.postman_collection.json" \
+          --environment "Backend-repo/postman/QA Environment.postman_environment.json" \
           --reporters cli,json \
           --reporter-json-export Backend-repo/newman-report.json
 
