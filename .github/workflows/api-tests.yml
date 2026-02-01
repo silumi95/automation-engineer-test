@@ -41,10 +41,9 @@ jobs:
         run: |
           npm install
           export PORT=8000
-          export JWT_SECRET=mysecret
           export MONGO_URI=mongodb://localhost:27017/qa_test_db  
           npm run start &
-          sleep 10
+          sleep 20
 
       - name: Install Newman
         run: npm install -g newman
