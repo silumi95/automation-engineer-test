@@ -15,104 +15,78 @@ jobs:
           - 27017:27017
 
     steps:
+      # 1️⃣ Checkout test repo (current repo)
       - name: Checkout tests repo
         uses: actions/checkout@v4
 
+      # 2️⃣ Checkout backend repo
       - name: Checkout backend repo
         uses: actions/checkout@v4
         with:
           repository: silumi95/automation-engineer-test-be
           path: backend
-          token: ${{ secrets.GITHUB_TOKEN }}
 
+      # 3️⃣ Setup Node.js
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 18
 
+      # 4️⃣ Install backend dependencies
       - name: Install backend dependencies
         working-directory: backend
         run: npm install
 
+      # 5️⃣ Install netcat (for port checks)
       - name: Install netcat
         run: sudo apt-get update && sudo apt-get install -y netcat-openbsd
 
+      # 6️⃣ Wait for MongoDB
       - name: Wait for MongoDB
         run: |
-          echo "Waiting for MongoDB to be ready..."
+          echo "Waiting for MongoDB..."
           for i in {1..30}; do
-            nc -z mongodb 27017 && echo "MongoDB is ready" && break
+            nc -z localhost 27017 && echo "MongoDB ready" && break
             sleep 2
           done
 
+      # 7️⃣ Start backend server
       - name: Start backend server
         working-directory: backend
         env:
           PORT: 8000
-          MONGO_URI: mongodb://mongodb:27017/qa_test_db
+          MONGO_URI: mongodb://127.0.0.1:27017/qa_test_db
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
         run: |
           npm run dev &
-          echo "Waiting for backend to respond..."
+          echo "Waiting for backend on port 8000..."
           for i in {1..30}; do
-            curl -s http://localhost:8000/api/user/register >/dev/null && echo "Backend ready" && break
+            nc -z localhost 8000 && echo "Backend ready" && break
             sleep 2
           done
 
+      # 8️⃣ Install Newman
       - name: Install Newman
-        run: npm install -g newman
+        run: npm install -g newman newman-reporter-htmlextra
 
+      # 9️⃣ Run Postman collection
       - name: Run Postman collection
         run: |
-          ls -la Backend-repo/postman/
-          newman run "Backend-repo/postman/E2E Shift Management.postman_collection.json" \
-            --environment "Backend-repo/postman/QA Environment.postman_environment.json" \
+          ls -la backend/postman/
+
+          newman run "backend/postman/E2E Shift Management.postman_collection.json" \
+            -e "backend/postman/QA Environment.postman_environment.json" \
             --global-var "adminEmail=${{ secrets.ADMINEMAIL }}" \
             --global-var "adminPassword=${{ secrets.ADMINPASSWORD }}" \
-            --globals Backend-repo/postman/global.json \
-            --reporters cli,json \
-            --reporter-json-export Backend-repo/newman-report.json
+            -r cli,json,htmlextra \
+            --reporter-json-export newman-report.json \
+            --reporter-htmlextra-export newman-report.html
 
+      # 🔟 Upload Newman report
       - name: Upload Newman report
         uses: actions/upload-artifact@v4
         with:
           name: newman-report
-          path: Backend-repo/newman-report.json
-
-      - name: Comment Newman summary on PR
-        if: always()
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const fs = require('fs');
-            const reportPath = 'Backend-repo/newman-report.json';
-            if (!fs.existsSync(reportPath)) {
-              console.log('Newman report not found');
-              return;
-            }
-            const report = JSON.parse(fs.readFileSync(reportPath));
-            const stats = report.run.stats;
-            const summary = `
-            ## Newman API Test Results
-
-            **Assertions**
-            - Passed: ${stats.assertions.total - stats.assertions.failed}
-            - Failed: ${stats.assertions.failed}
-            - Total: ${stats.assertions.total}
-
-            **Requests**
-            - Total: ${stats.requests.total}
-            - Failed: ${stats.requests.failed}
-
-            Duration: ${report.run.timings.completed - report.run.timings.started} ms
-            `;
-            if (context.issue.number) {
-              github.rest.issues.createComment({
-                issue_number: context.issue.number,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                body: summary
-              });
-            } else {
-              console.log(summary);
-            }
+          path: |
+            newman-report.json
+            newman-
