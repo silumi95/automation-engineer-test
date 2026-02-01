@@ -47,16 +47,16 @@ jobs:
 
       - name: Run Postman collection
         run: |
-          newman run ../Backend/postman/ShiftManagement.postman_collection.json \
-          --environment ../Backend/postman/ShiftManagement.postman_environment.json \
+          newman run Backend/postman/ShiftManagement.postman_collection.json \
+          --environment Backend/postman/ShiftManagement.postman_environment.json \
           --reporters cli,json \
-          --reporter-json-export newman-report.json
+          --reporter-json-export Backend/newman-report.json
 
       - name: Upload Newman report
         uses: actions/upload-artifact@v4
         with:
           name: newman-report
-          path: backend/newman-report.json
+          path: Backend/newman-report.json -report.json
 
       - name: Comment Newman summary on PR
         if: always()
