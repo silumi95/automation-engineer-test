@@ -46,7 +46,6 @@ jobs:
         run: npm install -g newman
 
       - name: Run Postman collection
-        working-directory: backend
         run: |
           newman run ../Backend/postman/ShiftManagement.postman_collection.json \
           --environment ../Backend/postman/ShiftManagement.postman_environment.json \
