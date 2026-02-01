@@ -44,12 +44,11 @@ jobs:
           npm run start &
           echo "Waiting for backend to be ready..."
           for i in {1..30}; do
-            if curl -s http://localhost:8000/api/user/register
-              echo "Backend is up!"
-              break
-            fi
-            sleep 2
-          done
+          if curl -s -f http://localhost:8000/api/user/register >/dev/null 2>&1; then
+          echo "Backend is up!"
+          break
+          fi
+          sleep 2
 
       - name: Install Newman
         run: npm install -g newman
