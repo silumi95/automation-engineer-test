@@ -198,7 +198,7 @@ jobs:
               });
           "
           
-          echo "✅ Admin user setup complete. Postman will create other users as needed."
+          echo "Admin user setup complete. Postman will create other users as needed."
 
       - name: Install Newman
         run: npm install -g newman newman-reporter-htmlextra
