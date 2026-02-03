@@ -29,12 +29,21 @@ jobs:
         with:
           node-version: 20
 
+      - name: Check backend directory structure
+        run: |
+          echo "Checking backend directory structure..."
+          ls -la backend/
+          echo "Looking for server.js..."
+          find backend -name "server.js" -type f
+
       - name: Install backend dependencies
         working-directory: backend
-        run: npm install
+        run: |
+          echo "Installing backend dependencies..."
+          npm install
 
       - name: Install required tools
-        run: sudo apt-get update && sudo apt-get install -y netcat-openbsd curl jq
+        run: sudo apt-get update && sudo apt-get install -y netcat-openbsd curl
 
       - name: Wait for MongoDB
         run: |
@@ -47,225 +56,175 @@ jobs:
       - name: Setup backend environment
         working-directory: backend
         run: |
+          echo "Setting up backend environment..."
           echo "PORT=8000" > .env
           echo "MONGO_URI=mongodb://127.0.0.1:27017/qa_test_db" >> .env
           echo "NODE_ENV=development" >> .env
           echo "JWT_SECRET=test-jwt-secret-for-ci-12345-67890" >> .env
-          echo "Environment file created:"
-          cat .env
+          echo "Environment file created"
 
-      - name: Start backend server
+      - name: Find and start backend server
         working-directory: backend
         run: |
-          echo "Starting backend server..."
+          echo "Looking for server entry point..."
           
-          nohup npm start > server.log 2>&1 &
+          # Check common server file locations
+          if [ -f "server.js" ]; then
+            SERVER_FILE="server.js"
+            echo "Found server.js in root"
+          elif [ -f "src/server.js" ]; then
+            SERVER_FILE="src/server.js"
+            echo "Found server.js in src/"
+          elif [ -f "index.js" ]; then
+            SERVER_FILE="index.js"
+            echo "Found index.js"
+          elif [ -f "app.js" ]; then
+            SERVER_FILE="app.js"
+            echo "Found app.js"
+          else
+            echo "Error: Could not find server entry point!"
+            echo "Files in backend directory:"
+            ls -la
+            echo "Files in backend/src directory (if exists):"
+            ls -la src/ 2>/dev/null || echo "No src directory"
+            exit 1
+          fi
+          
+          echo "Starting server from: $SERVER_FILE"
+          
+          # Start server in background
+          nohup node $SERVER_FILE > server.log 2>&1 &
           SERVER_PID=$!
           echo $SERVER_PID > server.pid
           
-          echo "Waiting for server to start (PID: $SERVER_PID)..."
+          echo "Server started with PID: $SERVER_PID"
+          echo "Waiting for server to be ready..."
           
-          for i in {1..30}; do
+          # Wait for server with retries
+          MAX_RETRIES=30
+          RETRY_COUNT=0
+          SERVER_READY=false
+          
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+            echo "Checking server (attempt $((RETRY_COUNT + 1))/$MAX_RETRIES)..."
+            
+            # Check if process is still running
+            if ! ps -p $SERVER_PID > /dev/null 2>&1; then
+              echo "Server process died!"
+              if [ -f server.log ]; then
+                echo "=== Server logs ==="
+                tail -100 server.log
+              fi
+              exit 1
+            fi
+            
+            # Try to connect to server
             if curl -s -f http://localhost:8000 > /dev/null 2>&1; then
-              echo "Backend server is responding"
-              
-              echo "Testing server health..."
-              curl -s http://localhost:8000/health || curl -s http://localhost:8000/api/health || echo "No health endpoint found"
-              
+              echo "Server is responding on root endpoint"
+              SERVER_READY=true
+              break
+            elif curl -s -f http://localhost:8000/api/docs > /dev/null 2>&1; then
+              echo "Server is responding on /api/docs"
+              SERVER_READY=true
+              break
+            elif curl -s -f http://localhost:8000/api/user/register > /dev/null 2>&1; then
+              echo "Server is responding on /api/user/register"
+              SERVER_READY=true
               break
             fi
+            
+            RETRY_COUNT=$((RETRY_COUNT + 1))
             sleep 2
           done
           
-          if ! ps -p $SERVER_PID > /dev/null 2>&1; then
-            echo "Server process died"
+          if [ "$SERVER_READY" = false ]; then
+            echo "Server failed to start within timeout"
             if [ -f server.log ]; then
-              echo "Server logs:"
-              tail -50 server.log
+              echo "=== Server logs (last 200 lines) ==="
+              tail -200 server.log
             fi
             exit 1
           fi
           
-          if ! curl -s -f http://localhost:8000 > /dev/null 2>&1; then
-            echo "Server running but not responding. Logs:"
-            tail -50 server.log
-          fi
+          echo "Server is ready and responding"
+          
+          # Test API endpoint
+          echo "Testing API endpoint..."
+          curl -s -X POST http://localhost:8000/api/user/register \
+            -H "Content-Type: application/json" \
+            -d '{"name":"Test User","email":"test@example.com","password":"Test123!"}' \
+            -w " -> Status: %{http_code}\n" || echo "API test failed"
 
-      - name: Create admin user via API
+      - name: Create admin user for testing
+        working-directory: backend
         run: |
-          echo "Creating admin user via API..."
+          echo "Creating admin user for testing..."
           
-          ADMIN_RESPONSE=$(curl -s -X POST http://localhost:8000/api/user/register \
+          # First, register a user via API. The backend will assign the default 'worker' role.
+          # We check for status 200 (created) or 400 (user already exists), both are acceptable here.
+          REGISTER_RESPONSE=$(curl -s -X POST http://localhost:8000/api/user/register \
             -H "Content-Type: application/json" \
-            -d '{"name":"Test Admin","email":"admin@example.com","password":"AdminPass123!","role":"admin"}' \
+            -d '{"name":"Admin User","email":"admin@example.com","password":"AdminPass123!"}' \
             -w "\nStatus: %{http_code}")
           
-          echo "Admin registration response:"
-          echo "$ADMIN_RESPONSE"
+          echo "Admin user registration response: $REGISTER_RESPONSE"
           
-          if echo "$ADMIN_RESPONSE" | grep -q "Status: [45]" || echo "$ADMIN_RESPONSE" | grep -q "error"; then
-            echo "Admin registration failed, trying worker registration..."
-            
-            curl -s -X POST http://localhost:8000/api/user/register \
-              -H "Content-Type: application/json" \
-              -d '{"name":"Test Admin","email":"admin@example.com","password":"AdminPass123!"}' \
-              -w "\nStatus: %{http_code}"
-            
-            echo "Note: Admin user may need to be promoted manually"
+          if [[ ! "$REGISTER_RESPONSE" =~ "Status: 200" && ! "$REGISTER_RESPONSE" =~ "Status: 400" ]]; then
+            echo "Admin user registration failed with an unexpected status."
+            exit 1
           fi
           
-          echo "Creating worker user..."
-          WORKER_RESPONSE=$(curl -s -X POST http://localhost:8000/api/user/register \
-            -H "Content-Type: application/json" \
-            -d '{"name":"Test Worker","email":"worker@example.com","password":"WorkerPass123!"}' \
-            -w "\nStatus: %{http_code}")
+          echo "User 'admin@example.com' registered. Now promoting to admin role directly in the database."
           
-          echo "Worker registration:"
-          echo "$WORKER_RESPONSE"
-          
-          echo "Testing admin login..."
-          LOGIN_RESPONSE=$(curl -s -X POST http://localhost:8000/api/user/login \
-            -H "Content-Type: application/json" \
-            -d '{"email":"admin@example.com","password":"AdminPass123!"}' \
-            -w "\nStatus: %{http_code}")
-          
-          echo "Admin login:"
-          echo "$LOGIN_RESPONSE"
-
-      - name: Debug server status
-        run: |
-          echo "=== Server Status Check ==="
-          echo "Processes:"
-          ps aux | grep -E "(node|npm)" | grep -v grep || echo "No node processes found"
-          
-          echo "=== Port 8000 ==="
-          netstat -tulpn | grep :8000 || echo "Nothing on port 8000"
-          
-          echo "=== Server Logs (last 10 lines) ==="
-          if [ -f backend/server.log ]; then
-            tail -10 backend/server.log
-          else
-            echo "No server logs found"
-          fi
-          
-          echo "=== Test endpoints ==="
-          for endpoint in "" "/api/user/register" "/api/user/login"; do
-            echo -n "http://localhost:8000$endpoint : "
-            curl -s -o /dev/null -w "%{http_code}" -m 5 "http://localhost:8000$endpoint" || echo "timeout"
-          done
+          # We need to elevate this user to 'admin'. The API for promotion requires admin rights,
+          # creating a chicken-and-egg problem for the first admin. So, we'll update the role directly in MongoDB.
+          node -e "
+            const mongoose = require('mongoose');
+            mongoose.connect('mongodb://127.0.0.1:27017/qa_test_db')
+              .then(() => {
+                console.log('Connected to DB for admin promotion.');
+                return mongoose.connection.db.collection('users').updateOne({ email: 'admin@example.com' }, { \$set: { role: 'admin' } });
+              })
+              .then(result => {
+                if (result.matchedCount === 0) throw new Error('User admin@example.com not found in database.');
+                if (result.modifiedCount === 1) console.log('Successfully promoted admin@example.com to admin.');
+                else console.log('User admin@example.com was already an admin.');
+                return mongoose.disconnect();
+              })
+              .catch(err => {
+                console.error('Admin promotion script failed:', err.message);
+                process.exit(1);
+              });
+          "
 
       - name: Install Newman
         run: npm install -g newman newman-reporter-htmlextra
 
-      - name: Create CI environment file
+      - name: Check Postman files
         run: |
-          echo "Creating CI environment file..."
-          
-          cat > Backend-repo/postman/ci-environment.json << 'EOF'
-          {
-            "id": "ci-environment",
-            "name": "CI Environment",
-            "values": [
-              {
-                "key": "baseUrl",
-                "value": "http://localhost:8000",
-                "enabled": true
-              },
-              {
-                "key": "adminEmail",
-                "value": "admin@example.com",
-                "enabled": true
-              },
-              {
-                "key": "adminPassword",
-                "value": "AdminPass123!",
-                "enabled": true
-              },
-              {
-                "key": "jwtToken",
-                "value": "",
-                "enabled": true
-              },
-              {
-                "key": "adminJwtToken",
-                "value": "",
-                "enabled": true
-              },
-              {
-                "key": "userJwtToken",
-                "value": "",
-                "enabled": true
-              },
-              {
-                "key": "userId",
-                "value": "",
-                "enabled": true
-              },
-              {
-                "key": "userEmail",
-                "value": "",
-                "enabled": true
-              },
-              {
-                "key": "userName",
-                "value": "",
-                "enabled": true
-              },
-              {
-                "key": "userRole",
-                "value": "",
-                "enabled": true
-              },
-              {
-                "key": "adminId",
-                "value": "",
-                "enabled": true
-              },
-              {
-                "key": "adminName",
-                "value": "",
-                "enabled": true
-              },
-              {
-                "key": "adminRole",
-                "value": "",
-                "enabled": true
-              },
-              {
-                "key": "shiftId",
-                "value": "",
-                "enabled": true
-              },
-              {
-                "key": "shiftIdCancel",
-                "value": "",
-                "enabled": true
-              },
-              {
-                "key": "adminShiftId",
-                "value": "",
-                "enabled": true
-              }
-            ]
-          }
-          EOF
-          
-          echo "Environment file created at Backend-repo/postman/ci-environment.json"
+          echo "Checking Postman files..."
+          ls -la Backend-repo/postman/
+          echo "Collection file exists:"
+          [ -f "Backend-repo/postman/E2E Shift Management.postman_collection.json" ] && echo "YES" || echo "NO"
+          echo "Environment file exists:"
+          [ -f "Backend-repo/postman/QA Environment.postman_environment.json" ] && echo "YES" || echo "NO"
 
       - name: Run Postman collection
         run: |
           echo "Starting Postman tests..."
-          echo "Current directory: $(pwd)"
-          echo "Files in /Backend-repo/postman/:"
-          ls -la Backend-repo/postman/
           
+          # Check if collection exists
           if [ ! -f "Backend-repo/postman/E2E Shift Management.postman_collection.json" ]; then
             echo "Error: Postman collection not found!"
+            echo "Available files in Backend-repo/postman/:"
+            ls -la Backend-repo/postman/
             exit 1
           fi
           
+          # Run tests
+          echo "Running Newman tests..."
           newman run "Backend-repo/postman/E2E Shift Management.postman_collection.json" \
-            -e "Backend-repo/postman/ci-environment.json" \
+            -e "Backend-repo/postman/QA Environment.postman_environment.json" \
             --env-var "baseUrl=http://localhost:8000" \
             --env-var "adminEmail=admin@example.com" \
             --env-var "adminPassword=AdminPass123!" \
@@ -273,48 +232,53 @@ jobs:
             --timeout-request 60000 \
             --timeout-script 60000 \
             --disable-unicode \
-            --verbose \
             -r cli,json,htmlextra \
             --reporter-json-export newman-report.json \
             --reporter-htmlextra-export newman-report.html \
             --suppress-exit-code
+          
+          echo "Newman tests completed"
 
       - name: Show test results summary
         if: always()
         run: |
           echo "=== Test Results Summary ==="
           if [ -f newman-report.json ]; then
-            echo "Report exists, extracting summary..."
-            if command -v jq >/dev/null 2>&1; then
-              TOTAL_REQUESTS=$(jq '.run.stats.requests.total' newman-report.json 2>/dev/null || echo "N/A")
-              FAILED_REQUESTS=$(jq '.run.stats.requests.failed' newman-report.json 2>/dev/null || echo "N/A")
-              TOTAL_TESTS=$(jq '.run.stats.assertions.total' newman-report.json 2>/dev/null || echo "N/A")
-              FAILED_TESTS=$(jq '.run.stats.assertions.failed' newman-report.json 2>/dev/null || echo "N/A")
-              
-              echo "Total Requests: $TOTAL_REQUESTS"
-              echo "Failed Requests: $FAILED_REQUESTS"
-              echo "Total Tests: $TOTAL_TESTS"
-              echo "Failed Tests: $FAILED_TESTS"
-              
-              if [ "$FAILED_REQUESTS" != "0" ] || [ "$FAILED_TESTS" != "0" ]; then
-                echo "Some tests failed"
-              else
-                echo "All tests passed!"
-              fi
+            echo "Report exists"
+            
+            # Install jq if not available
+            if ! command -v jq &> /dev/null; then
+              sudo apt-get install -y jq
+            fi
+            
+            TOTAL_REQUESTS=$(jq '.run.stats.requests.total' newman-report.json 2>/dev/null || echo "N/A")
+            FAILED_REQUESTS=$(jq '.run.stats.requests.failed' newman-report.json 2>/dev/null || echo "N/A")
+            TOTAL_TESTS=$(jq '.run.stats.assertions.total' newman-report.json 2>/dev/null || echo "N/A")
+            FAILED_TESTS=$(jq '.run.stats.assertions.failed' newman-report.json 2>/dev/null || echo "N/A")
+            
+            echo "Total Requests: $TOTAL_REQUESTS"
+            echo "Failed Requests: $FAILED_REQUESTS"
+            echo "Total Tests: $TOTAL_TESTS"
+            echo "Failed Tests: $FAILED_TESTS"
+            
+            if [ "$FAILED_REQUESTS" != "0" ] || [ "$FAILED_TESTS" != "0" ]; then
+              echo "Some tests failed"
+              echo "=== First few failures ==="
+              jq -r '.run.failures[0:5][] | "\(.source.name): \(.error.test // .error.message)"' newman-report.json 2>/dev/null || echo "Could not parse failures"
             else
-              echo "jq not available for parsing report"
+              echo "All tests passed!"
             fi
           else
             echo "No test report generated"
           fi
 
-      - name: Show server logs on failure
+      - name: Show server logs if tests failed
         if: failure()
         working-directory: backend
         run: |
-          echo "=== SERVER LOGS (last 50 lines) ==="
+          echo "=== SERVER LOGS (last 200 lines) ==="
           if [ -f server.log ]; then
-            tail -50 server.log
+            tail -200 server.log
           else
             echo "No server logs found"
           fi

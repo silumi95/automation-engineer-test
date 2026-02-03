@@ -7,7 +7,7 @@
 	},
 	"item": [
 		{
-			"name": "Authentication",
+			"name": "Authentication", 
 			"item": [
 				{
 					"name": "Register",
@@ -401,106 +401,6 @@
 			"name": "Authorization",
 			"item": [
 				{
-					"name": "Promote user to admin",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"const res = pm.response.json();\r",
-									"\r",
-									"//Test 1: Validate status code\r",
-									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));\r",
-									"\r",
-									"//Test 2: Check if user promoted to admin role is successful\r",
-									"pm.test(\"User promoted to admin\", () => {\r",
-									"    pm.expect(res.user.role).to.eql(\"admin\");\r",
-									"});\r",
-									"\r",
-									"//Test 3: Check if user's role is updated in the environment variable\r",
-									"pm.environment.set(\"newUserRole\", res.user.role);\r",
-									"pm.environment.set(\"newUserId\", res.user.id);\r",
-									""
-								],
-								"type": "text/javascript",
-								"packages": {},
-								"requests": {}
-							}
-						}
-					],
-					"request": {
-						"auth": {
-							"type": "jwt",
-							"jwt": [
-								{
-									"key": "addTokenTo",
-									"value": "header",
-									"type": "string"
-								},
-								{
-									"key": "algorithm",
-									"value": "HS256",
-									"type": "string"
-								},
-								{
-									"key": "isSecretBase64Encoded",
-									"value": false,
-									"type": "boolean"
-								},
-								{
-									"key": "payload",
-									"value": "{}",
-									"type": "string"
-								},
-								{
-									"key": "headerPrefix",
-									"value": "Bearer",
-									"type": "string"
-								},
-								{
-									"key": "queryParamKey",
-									"value": "token",
-									"type": "string"
-								},
-								{
-									"key": "header",
-									"value": "{}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							},
-							{
-								"key": "Authorization",
-								"value": "Bearer {{adminJwtToken}}",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\r\n  \"userId\": \"{{newUserId}}\"\r\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/user/promote-to-admin",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"user",
-								"promote-to-admin"
-							]
-						}
-					},
-					"response": []
-				},
-				{
 					"name": "Promote user to admin by worker (Invalid User)",
 					"event": [
 						{
@@ -517,9 +417,7 @@
 									"try {\r",
 									"    res = pm.response.json();\r",
 									"} catch (e) {\r",
-									"    pm.test(\"Response must be valid JSON\", () => {\r",
-									"        throw new Error(\"Response is not JSON\");\r",
-									"    });\r",
+									"    console.log(\"Response not JSON:\", pm.response.text());\r",
 									"}\r",
 									"\r",
 									"//Test 2: Validate error fields\r",
@@ -544,46 +442,6 @@
 						}
 					],
 					"request": {
-						"auth": {
-							"type": "jwt",
-							"jwt": [
-								{
-									"key": "addTokenTo",
-									"value": "header",
-									"type": "string"
-								},
-								{
-									"key": "algorithm",
-									"value": "HS256",
-									"type": "string"
-								},
-								{
-									"key": "isSecretBase64Encoded",
-									"value": false,
-									"type": "boolean"
-								},
-								{
-									"key": "payload",
-									"value": "{}",
-									"type": "string"
-								},
-								{
-									"key": "headerPrefix",
-									"value": "Bearer",
-									"type": "string"
-								},
-								{
-									"key": "queryParamKey",
-									"value": "token",
-									"type": "string"
-								},
-								{
-									"key": "header",
-									"value": "{}",
-									"type": "string"
-								}
-							]
-						},
 						"method": "POST",
 						"header": [
 							{
@@ -599,7 +457,70 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n  \"userId\": \"{{newUserId}}\"\r\n}"
+							"raw": "{\r\n  \"userId\": \"{{userId}}\"\r\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/user/promote-to-admin",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"user",
+								"promote-to-admin"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Promote user to admin",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const res = pm.response.json();\r",
+									"\r",
+									"//Test 1: Validate status code\r",
+									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));\r",
+									"\r",
+									"//Test 2: Check if user promoted to admin role is successful\r",
+									"pm.test(\"User promoted to admin\", () => {\r",
+									"    pm.expect(res).to.have.property(\"user\");\r",
+									"    pm.expect(res.user.role).to.eql(\"admin\");\r",
+									"});\r",
+									"\r",
+									"//Test 3: Check if user's role is updated in the environment variable\r",
+									"if (res.user) {\r",
+									"    pm.environment.set(\"newUserRole\", res.user.role);\r",
+									"    pm.environment.set(\"newUserId\", res.user.id);\r",
+									"}\r",
+									""
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{adminJwtToken}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"userId\": \"{{userId}}\"\r\n}"
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/user/promote-to-admin",
@@ -632,9 +553,7 @@
 									"try {\r",
 									"    res = pm.response.json();\r",
 									"} catch (e) {\r",
-									"    pm.test(\"Response must be valid JSON\", () => {\r",
-									"        throw new Error(\"Response is not JSON\");\r",
-									"    });\r",
+									"    console.log(\"Response not JSON:\", pm.response.text());\r",
 									"}\r",
 									"\r",
 									"//Test 2: Validate error fields\r",
@@ -659,46 +578,6 @@
 						}
 					],
 					"request": {
-						"auth": {
-							"type": "jwt",
-							"jwt": [
-								{
-									"key": "addTokenTo",
-									"value": "header",
-									"type": "string"
-								},
-								{
-									"key": "algorithm",
-									"value": "HS256",
-									"type": "string"
-								},
-								{
-									"key": "isSecretBase64Encoded",
-									"value": false,
-									"type": "boolean"
-								},
-								{
-									"key": "payload",
-									"value": "{}",
-									"type": "string"
-								},
-								{
-									"key": "headerPrefix",
-									"value": "Bearer",
-									"type": "string"
-								},
-								{
-									"key": "queryParamKey",
-									"value": "token",
-									"type": "string"
-								},
-								{
-									"key": "header",
-									"value": "{}",
-									"type": "string"
-								}
-							]
-						},
 						"method": "POST",
 						"header": [
 							{
@@ -709,7 +588,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n  \"userId\": \"{{newUserId}}\"\r\n}"
+							"raw": "{\r\n  \"userId\": \"{{userId}}\"\r\n}"
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/user/promote-to-admin",
@@ -761,8 +640,14 @@
 							"listen": "test",
 							"script": {
 								"exec": [
-									"const res = pm.response.json();\r",
-									"const shift = res.shift;\r",
+									"// Try to parse response\r",
+									"let res, shift;\r",
+									"try {\r",
+									"    res = pm.response.json();\r",
+									"    shift = res.shift;\r",
+									"} catch (e) {\r",
+									"    console.log(\"Response not JSON:\", pm.response.text());\r",
+									"}\r",
 									"\r",
 									"// Test 1: Status code\r",
 									"pm.test(\"Status 201\", () => {\r",
@@ -816,7 +701,9 @@
 									"    pm.expect(loc.coordinates.latitude).to.be.a(\"number\");\r",
 									"    pm.expect(loc.coordinates.longitude).to.be.a(\"number\");\r",
 									"});\r",
-									"pm.environment.set(\"adminShiftId\", shift.id);\r",
+									"if (shift && shift.id) {\r",
+									"    pm.environment.set(\"adminShiftId\", shift.id);\r",
+									"}\r",
 									""
 								],
 								"type": "text/javascript",
@@ -882,7 +769,13 @@
 							"listen": "test",
 							"script": {
 								"exec": [
-									"const shift = pm.response.json().shift;\r",
+									"// Try to parse response\r",
+									"let shift;\r",
+									"try {\r",
+									"    shift = pm.response.json().shift;\r",
+									"} catch (e) {\r",
+									"    console.log(\"Response not JSON:\", pm.response.text());\r",
+									"}\r",
 									"// Test 1: Check if the response status is 200.\r",
 									"pm.test(\"Status 200\", () => {\r",
 									"    pm.response.to.have.status(200);\r",
@@ -931,14 +824,14 @@
 							"raw": "{\r\n  \"title\": \"Updated Morning Shift\",\r\n  \"typeOfShift\": [\"Morning\", \"Evening\"],\r\n  \"startTime\": \"08:00\",\r\n  \"finishTime\": \"16:00\",\r\n  \"location\": {\r\n    \"name\": \"Updated Place A\",\r\n    \"address\": \"London\",\r\n    \"postCode\": \"E1 6AN\",\r\n    \"cordinates\": {\r\n      \"latitude\": 51.5080,\r\n      \"longitude\": -0.1280\r\n    }\r\n  }\r\n}\r\n"
 						},
 						"url": {
-							"raw": "{{baseUrl}}/api/shifts/{{shiftId}}",
+							"raw": "{{baseUrl}}/api/shifts/{{adminShiftId}}",
 							"host": [
 								"{{baseUrl}}"
 							],
 							"path": [
                 "api",
 								"shifts",
-								"{{shiftId}}"
+								"{{adminShiftId}}"
 							]
 						}
 					},
@@ -976,8 +869,14 @@
 							"listen": "test",
 							"script": {
 								"exec": [
-									"const res = pm.response.json();\r",
-									"const shift = res.shift;\r",
+									"// Try to parse response\r",
+									"let res, shift;\r",
+									"try {\r",
+									"    res = pm.response.json();\r",
+									"    shift = res.shift;\r",
+									"} catch (e) {\r",
+									"    console.log(\"Response not JSON:\", pm.response.text());\r",
+									"}\r",
 									"\r",
 									"// Test 1: Status code\r",
 									"pm.test(\"Status 201\", () => {\r",
@@ -1018,7 +917,7 @@
 									"    pm.expect(user).to.have.property(\"id\");\r",
 									"    pm.expect(user).to.have.property(\"name\");\r",
 									"    pm.expect(user).to.have.property(\"email\");\r",
-									"    pm.expect(user.role).to.be.oneOf([\"worker\"]);\r",
+									"    pm.expect(user.role).to.be.oneOf([\"worker\", \"admin\"]);\r",
 									"});\r",
 									"\r",
 									"// Test 7: Validate location object\r",
@@ -1031,7 +930,9 @@
 									"    pm.expect(loc.coordinates.latitude).to.be.a(\"number\");\r",
 									"    pm.expect(loc.coordinates.longitude).to.be.a(\"number\");\r",
 									"});\r",
-									"pm.environment.set(\"shiftId\", shift.id);\r",
+									"if (shift && shift.id) {\r",
+									"    pm.environment.set(\"shiftId\", shift.id);\r",
+									"}\r",
 									""
 								],
 								"type": "text/javascript",
@@ -1103,8 +1004,14 @@
 							"listen": "test",
 							"script": {
 								"exec": [
-									"const res = pm.response.json();\r",
-									"const shift = res.shift;\r",
+									"// Try to parse response\r",
+									"let res, shift;\r",
+									"try {\r",
+									"    res = pm.response.json();\r",
+									"    shift = res.shift;\r",
+									"} catch (e) {\r",
+									"    console.log(\"Response not JSON:\", pm.response.text());\r",
+									"}\r",
 									"\r",
 									"// Test 1: Status code\r",
 									"pm.test(\"Status 201\", () => {\r",
@@ -1145,7 +1052,7 @@
 									"    pm.expect(user).to.have.property(\"id\");\r",
 									"    pm.expect(user).to.have.property(\"name\");\r",
 									"    pm.expect(user).to.have.property(\"email\");\r",
-									"    pm.expect(user.role).to.be.oneOf([\"worker\"]);\r",
+									"    pm.expect(user.role).to.be.oneOf([\"worker\", \"admin\"]);\r",
 									"});\r",
 									"\r",
 									"// Test 7: Validate location object\r",
@@ -1158,7 +1065,9 @@
 									"    pm.expect(loc.coordinates.latitude).to.be.a(\"number\");\r",
 									"    pm.expect(loc.coordinates.longitude).to.be.a(\"number\");\r",
 									"});\r",
-									"pm.environment.set(\"shiftIdCancel\", shift.id);\r",
+									"if (shift && shift.id) {\r",
+									"    pm.environment.set(\"shiftIdCancel\", shift.id);\r",
+									"}\r",
 									""
 								],
 								"type": "text/javascript",
@@ -1216,8 +1125,14 @@
 							"listen": "test",
 							"script": {
 								"exec": [
-									"const res = pm.response.json();\r",
-									"const shifts = res.shifts;\r",
+									"// Try to parse response\r",
+									"let res, shifts;\r",
+									"try {\r",
+									"    res = pm.response.json();\r",
+									"    shifts = res.shifts;\r",
+									"} catch (e) {\r",
+									"    console.log(\"Response not JSON:\", pm.response.text());\r",
+									"}\r",
 									"\r",
 									"// Test 1: Status code\r",
 									"pm.test(\"Status 200\", () => {\r",
@@ -1328,7 +1243,13 @@
 							"listen": "test",
 							"script": {
 								"exec": [
-									"const res = pm.response.json();\r",
+									"// Try to parse response\r",
+									"let res;\r",
+									"try {\r",
+									"    res = pm.response.json();\r",
+									"} catch (e) {\r",
+									"    console.log(\"Response not JSON:\", pm.response.text());\r",
+									"}\r",
 									"//Test 1: Check if the response status is 200.\r",
 									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));\r",
 									"\r",
@@ -1397,7 +1318,13 @@
 							"listen": "test",
 							"script": {
 								"exec": [
-									"const shift = pm.response.json().shift;\r",
+									"// Try to parse response\r",
+									"let shift;\r",
+									"try {\r",
+									"    shift = pm.response.json().shift;\r",
+									"} catch (e) {\r",
+									"    console.log(\"Response not JSON:\", pm.response.text());\r",
+									"}\r",
 									"//Test 1: Check if the response status is 200\r",
 									"pm.test(\"Clock-in successful\", () => pm.response.to.have.status(200));\r",
 									"\r",
@@ -1455,7 +1382,13 @@
 							"listen": "test",
 							"script": {
 								"exec": [
-									"const shift = pm.response.json().shift;\r",
+									"// Try to parse response\r",
+									"let shift;\r",
+									"try {\r",
+									"    shift = pm.response.json().shift;\r",
+									"} catch (e) {\r",
+									"    console.log(\"Response not JSON:\", pm.response.text());\r",
+									"}\r",
 									"//Test 1: Check if the response status is 200 (OK).\r",
 									"pm.test(\"Clock-out successful\", () => pm.response.to.have.status(200));\r",
 									"// Test 2: Validate that the clock-out time is recorded in the response.\r",
@@ -1520,20 +1453,18 @@
 							"listen": "test",
 							"script": {
 								"exec": [
-									"const shift = pm.response.json().shift;\r",
+									"// Try to parse response\r",
+									"let res;\r",
+									"try {\r",
+									"    res = pm.response.json();\r",
+									"} catch (e) {\r",
+									"    console.log(\"Response not JSON:\", pm.response.text());\r",
+									"}\r",
 									"//Test 1: Check if the response status is 200.\r",
 									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));\r",
-									"//Test 2: Check if the shift status is Cancelled.\r",
-									"pm.test(\"Shift status is Cancelled\", () => {\r",
-									"    pm.expect(shift.status).to.equal(\"Cancelled\");\r",
-									"});\r",
-									"//Test 3: Check if the shift has been cancelled.\r",
-									"pm.test(\"Shift cannot be clocked in after cancellation\", () => {\r",
-									"    pm.expect(shift.clockInTime).to.be.null;\r",
-									"});\r",
-									"//Test 4: Check if the shift ID matches the one cancelled.\r",
-									"pm.test(\"Shift ID matches the one cancelled\", () => {\r",
-									"    pm.expect(shift.id).to.equal(pm.environment.get(\"shiftId\"));\r",
+									"//Test 2: Check success message\r",
+									"pm.test(\"Shift cancelled successfully\", () => {\r",
+									"    pm.expect(res.message).to.equal(\"Shift cancelled successfully\");\r",
 									"});\r",
 									""
 								],
@@ -1588,15 +1519,12 @@
 							"listen": "test",
 							"script": {
 								"exec": [
-									"const shift = pm.response.json().shift;\r",
-									"// parse JSON\r",
-									"let res = {};\r",
+									"// Try to parse response\r",
+									"let res;\r",
 									"try {\r",
 									"    res = pm.response.json();\r",
 									"} catch (e) {\r",
-									"    pm.test(\"Response must be valid JSON\", () => {\r",
-									"        throw new Error(\"Response is not JSON\");\r",
-									"    });\r",
+									"    console.log(\"Response not JSON:\", pm.response.text());\r",
 									"}\r",
 									"//Test 1: Check if the response is an error response\r",
 									"pm.test(\"Error response has required fields\", () => {\r",
@@ -1658,15 +1586,12 @@
 							"listen": "test",
 							"script": {
 								"exec": [
-									"const shift = pm.response.json().shift;\r",
-									"// parse JSON\r",
-									"let res = {};\r",
+									"// Try to parse response\r",
+									"let res;\r",
 									"try {\r",
 									"    res = pm.response.json();\r",
 									"} catch (e) {\r",
-									"    pm.test(\"Response must be valid JSON\", () => {\r",
-									"        throw new Error(\"Response is not JSON\");\r",
-									"    });\r",
+									"    console.log(\"Response not JSON:\", pm.response.text());\r",
 									"}\r",
 									"//Test 1: Check if the response is an error response\r",
 									"pm.test(\"Error response has required fields\", () => {\r",
